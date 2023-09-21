@@ -1,0 +1,13 @@
+[package]
+name = "chesspos"
+description = "Basic structs for representing chess squares"
+version = "0.1.0"
+authors = ["Isak Jägberg <ijagberg@gmail.com>"]
+edition = "2021"
+license = "MIT"
+keywords = ["chess"]
+categories = ["data-structures"]
+repository = "https://github.com/ijagberg/chesspos"
+homepage = "https://github.com/ijagberg/chesspos"
+
+[dependencies]
