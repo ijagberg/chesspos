@@ -276,14 +276,14 @@ impl FromStr for Position {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars();
-        let file: File = chars
-            .next()
-            .ok_or(InvalidPositionError::InvalidLength)?
-            .try_into()?;
-        let rank: Rank = chars
-            .next()
-            .ok_or(InvalidPositionError::InvalidLength)?
-            .try_into()?;
+        let file = chars.next().ok_or(InvalidPositionError::InvalidLength)?;
+        let rank = chars.next().ok_or(InvalidPositionError::InvalidLength)?;
+        if let Some(_) = chars.next() {
+            return Err(InvalidPositionError::InvalidLength);
+        }
+
+        let file = File::try_from(file)?;
+        let rank = Rank::try_from(rank)?;
 
         Ok(Self::new(file, rank))
     }
@@ -695,6 +695,17 @@ mod tests {
     #[test]
     fn parse_position_test() {
         assert_eq!(E4, "e4".parse().unwrap());
-        assert!("abc".parse::<Position>().is_err());
+        assert_eq!(
+            "abc".parse::<Position>(),
+            Err(InvalidPositionError::InvalidLength)
+        );
+        assert_eq!(
+            "a5d".parse::<Position>(),
+            Err(InvalidPositionError::InvalidLength)
+        );
+        assert!(matches!(
+            "aa".parse::<Position>(),
+            Err(InvalidPositionError::InvalidRank(_))
+        ));
     }
 }
