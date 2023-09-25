@@ -1,5 +1,6 @@
 use self::consts::*;
 use std::{
+    error::Error,
     fmt::{Debug, Display},
     str::FromStr,
 };
@@ -235,13 +236,54 @@ impl Display for Position {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InvalidPositionError {
+    InvalidLength,
+    InvalidFile(InvalidFileError),
+    InvalidRank(InvalidRankError),
+}
+
+impl Display for InvalidPositionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                InvalidPositionError::InvalidLength => "invalid length".to_string(),
+                InvalidPositionError::InvalidFile(e) => e.to_string(),
+                InvalidPositionError::InvalidRank(e) => e.to_string(),
+            }
+        )
+    }
+}
+
+impl Error for InvalidPositionError {}
+
+impl From<InvalidFileError> for InvalidPositionError {
+    fn from(value: InvalidFileError) -> Self {
+        Self::InvalidFile(value)
+    }
+}
+
+impl From<InvalidRankError> for InvalidPositionError {
+    fn from(value: InvalidRankError) -> Self {
+        Self::InvalidRank(value)
+    }
+}
+
 impl FromStr for Position {
-    type Err = ();
+    type Err = InvalidPositionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars();
-        let file: File = chars.next().ok_or(())?.try_into()?;
-        let rank: Rank = chars.next().ok_or(())?.try_into()?;
+        let file: File = chars
+            .next()
+            .ok_or(InvalidPositionError::InvalidLength)?
+            .try_into()?;
+        let rank: Rank = chars
+            .next()
+            .ok_or(InvalidPositionError::InvalidLength)?
+            .try_into()?;
 
         Ok(Self::new(file, rank))
     }
@@ -340,8 +382,27 @@ impl Display for File {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InvalidFileError {
+    InvalidFile,
+}
+
+impl Display for InvalidFileError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                InvalidFileError::InvalidFile => "invalid file",
+            }
+        )
+    }
+}
+
+impl Error for InvalidFileError {}
+
 impl TryFrom<char> for File {
-    type Error = ();
+    type Error = InvalidFileError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         Ok(match value {
@@ -353,7 +414,7 @@ impl TryFrom<char> for File {
             'f' | 'F' => Self::F,
             'g' | 'G' => Self::G,
             'h' | 'H' => Self::H,
-            _ => return Err(()),
+            _ => return Err(InvalidFileError::InvalidFile),
         })
     }
 }
@@ -380,7 +441,7 @@ impl From<File> for usize {
 }
 
 impl TryFrom<u8> for File {
-    type Error = ();
+    type Error = InvalidFileError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         use File::*;
@@ -393,7 +454,7 @@ impl TryFrom<u8> for File {
             5 => F,
             6 => G,
             7 => H,
-            _ => return Err(()),
+            _ => return Err(InvalidFileError::InvalidFile),
         })
     }
 }
@@ -497,8 +558,27 @@ impl Display for Rank {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InvalidRankError {
+    InvalidRank,
+}
+
+impl Display for InvalidRankError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                InvalidRankError::InvalidRank => "invalid rank",
+            }
+        )
+    }
+}
+
+impl Error for InvalidRankError {}
+
 impl TryFrom<char> for Rank {
-    type Error = ();
+    type Error = InvalidRankError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         Ok(match value {
@@ -510,7 +590,7 @@ impl TryFrom<char> for Rank {
             '6' => Self::Six,
             '7' => Self::Seven,
             '8' => Self::Eight,
-            _ => return Err(()),
+            _ => return Err(InvalidRankError::InvalidRank),
         })
     }
 }
@@ -537,7 +617,7 @@ impl From<Rank> for usize {
 }
 
 impl TryFrom<u8> for Rank {
-    type Error = ();
+    type Error = InvalidRankError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         use Rank::*;
@@ -550,7 +630,7 @@ impl TryFrom<u8> for Rank {
             5 => Six,
             6 => Seven,
             7 => Eight,
-            _ => return Err(()),
+            _ => return Err(InvalidRankError::InvalidRank),
         })
     }
 }
