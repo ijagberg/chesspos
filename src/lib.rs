@@ -216,6 +216,27 @@ impl Position {
         let rank = self.rank().up()?;
         Some(Self::construct(file, rank))
     }
+
+    /// Return an iterator over the neighbors of `self`, going clockwise.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use chesspos::prelude::*;
+    /// let neighbors_of_e4: Vec<Position> = A3.neighbors().collect();
+    /// assert_eq!(neighbors_of_e4, vec![A4, B4, B3, B2, A2]);
+    /// ```
+    pub fn neighbors(&self) -> impl Iterator<Item = Self> {
+        use std::iter::once;
+        once(self.up())
+            .chain(once(self.up_right()))
+            .chain(once(self.right()))
+            .chain(once(self.down_right()))
+            .chain(once(self.down()))
+            .chain(once(self.down_left()))
+            .chain(once(self.left()))
+            .chain(once(self.up_left()))
+            .filter_map(|n| n)
+    }
 }
 
 impl From<(File, Rank)> for Position {
@@ -684,7 +705,7 @@ mod tests {
             if let Some(left) = pos.left() {
                 assert_eq!(left.right(), Some(pos));
             }
-            if let Some(up_left) = pos.up_left(){
+            if let Some(up_left) = pos.up_left() {
                 assert_eq!(up_left.down_right(), Some(pos));
             }
         }
