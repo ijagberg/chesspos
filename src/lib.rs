@@ -661,6 +661,33 @@ mod tests {
         assert_eq!(E4.down_left(), Some(D3));
         assert_eq!(E4.left(), Some(D4));
         assert_eq!(E4.up_left(), Some(D5));
+
+        for pos in Position::increasing_iter() {
+            if let Some(up) = pos.up() {
+                assert_eq!(up.down(), Some(pos));
+            }
+            if let Some(up_right) = pos.up_right() {
+                assert_eq!(up_right.down_left(), Some(pos));
+            }
+            if let Some(right) = pos.right() {
+                assert_eq!(right.left(), Some(pos));
+            }
+            if let Some(down_right) = pos.down_right() {
+                assert_eq!(down_right.up_left(), Some(pos));
+            }
+            if let Some(down) = pos.down() {
+                assert_eq!(down.up(), Some(pos));
+            }
+            if let Some(down_left) = pos.down_left() {
+                assert_eq!(down_left.up_right(), Some(pos));
+            }
+            if let Some(left) = pos.left() {
+                assert_eq!(left.right(), Some(pos));
+            }
+            if let Some(up_left) = pos.up_left(){
+                assert_eq!(up_left.down_right(), Some(pos));
+            }
+        }
     }
 
     #[test]
