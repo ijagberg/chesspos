@@ -235,7 +235,7 @@ impl Position {
             .chain(once(self.down_left()))
             .chain(once(self.left()))
             .chain(once(self.up_left()))
-            .filter_map(|n| n)
+            .flatten()
     }
 }
 
@@ -299,7 +299,7 @@ impl FromStr for Position {
         let mut chars = s.chars();
         let file = chars.next().ok_or(InvalidPositionError::InvalidLength)?;
         let rank = chars.next().ok_or(InvalidPositionError::InvalidLength)?;
-        if let Some(_) = chars.next() {
+        if chars.next().is_some() {
             return Err(InvalidPositionError::InvalidLength);
         }
 
