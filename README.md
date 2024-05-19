@@ -1,0 +1,1 @@
+Useful structs and constants for representing chess board positions.
