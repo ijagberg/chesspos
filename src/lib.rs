@@ -229,7 +229,8 @@ impl Display for Position {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Error returned when parsing a `Position` fails.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum InvalidPositionError {
     InvalidLength,
     InvalidFile(InvalidFileError),
@@ -434,7 +435,7 @@ impl Display for File {
 }
 
 /// Error returned when parsing a `File` fails.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum InvalidFileError {
     InvalidFile,
 }
@@ -608,7 +609,7 @@ impl Display for Rank {
 }
 
 /// Error returned when parsing a `Rank` fails.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum InvalidRankError {
     InvalidRank,
 }
