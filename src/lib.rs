@@ -15,41 +15,13 @@ pub mod prelude;
 pub struct Position(File, Rank);
 
 impl Position {
-    fn construct(file: File, rank: Rank) -> Self {
+    const fn construct(file: File, rank: Rank) -> Self {
         Self(file, rank)
     }
 
     /// Create a new `Position`.
-    pub fn new(file: File, rank: Rank) -> Self {
+    pub const fn new(file: File, rank: Rank) -> Self {
         Self::construct(file, rank)
-    }
-
-    /// Create an iterator over all positions in the given `File`, in ascending order.
-    ///
-    /// ## Example
-    /// ```rust
-    /// # use chesspos::prelude::*;
-    /// let ranks: Vec<Position> = Position::file_iter(File::A).collect();
-    /// assert_eq!(ranks, vec![A1, A2, A3, A4, A5, A6, A7, A8]);
-    /// ```
-    pub fn file_iter(file: File) -> impl Iterator<Item = Self> {
-        ALL_RANKS
-            .iter()
-            .map(move |&rank| Self::construct(file, rank))
-    }
-
-    /// Create an iterator over all positions in the given `Rank`, in ascending order.
-    ///
-    /// ## Example
-    /// ```rust
-    /// # use chesspos::prelude::*;
-    /// let files: Vec<Position> = Position::rank_iter(Rank::Four).collect();
-    /// assert_eq!(files, vec![A4, B4, C4, D4, E4, F4, G4, H4]);
-    /// ```
-    pub fn rank_iter(rank: Rank) -> impl Iterator<Item = Self> {
-        ALL_FILES
-            .iter()
-            .map(move |&file| Self::construct(file, rank))
     }
 
     /// Create an iterator over all positions, in the order `A1, A2, A3, ..., H7, H8`.
@@ -72,7 +44,7 @@ impl Position {
     /// # use chesspos::prelude::*;
     /// assert_eq!(C3.file(), File::C);
     /// ```
-    pub fn file(&self) -> File {
+    pub const fn file(&self) -> File {
         self.0
     }
 
@@ -83,7 +55,7 @@ impl Position {
     /// # use chesspos::prelude::*;
     /// assert_eq!(F8.rank(), Rank::Eight);
     /// ```
-    pub fn rank(&self) -> Rank {
+    pub const fn rank(&self) -> Rank {
         self.1
     }
 
@@ -95,10 +67,10 @@ impl Position {
     /// assert_eq!(B5.manhattan_distance_to(E5), 3);
     /// assert_eq!(B5.manhattan_distance_to(E7), 5);
     /// ```
-    pub fn manhattan_distance_to(&self, other: Self) -> usize {
-        let file_dist = u8::from(self.file()).abs_diff(u8::from(other.file()));
-        let rank_dist = u8::from(self.rank()).abs_diff(u8::from(other.rank()));
-        (file_dist + rank_dist) as usize
+    pub fn manhattan_distance_to(self, other: Self) -> usize {
+        let file_dist = self.file().as_u8().abs_diff(other.file().as_u8());
+        let rank_dist = self.rank().as_u8().abs_diff(other.rank().as_u8());
+        usize::from(file_dist + rank_dist)
     }
 
     /// Get the `Position` one rank above `self`, or `None` if no such position exists.
@@ -295,16 +267,19 @@ impl From<InvalidRankError> for InvalidPositionError {
 impl FromStr for Position {
     type Err = InvalidPositionError;
 
+    /// Parse
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars();
         let file = chars.next().ok_or(InvalidPositionError::InvalidLength)?;
         let rank = chars.next().ok_or(InvalidPositionError::InvalidLength)?;
+
         if chars.next().is_some() {
+            // length of iterator should be exactly 2
             return Err(InvalidPositionError::InvalidLength);
         }
 
-        let file = File::try_from(file)?;
-        let rank = Rank::try_from(rank)?;
+        let file = File::try_from_char(file)?;
+        let rank = Rank::try_from_char(rank)?;
 
         Ok(Self::new(file, rank))
     }
@@ -332,10 +307,10 @@ impl File {
     /// assert_eq!(File::F.left(), Some(File::E));
     /// assert_eq!(File::A.left(), None);
     /// ```
-    pub fn left(&self) -> Option<Self> {
-        let v = u8::from(*self);
+    pub fn left(self) -> Option<Self> {
+        let v = self.as_u8();
         if v > 0 {
-            Self::try_from(v - 1).ok()
+            Self::try_from_u8(v - 1).ok()
         } else {
             None
         }
@@ -349,8 +324,8 @@ impl File {
     /// let left: Vec<File> = File::E.walk_left().collect();
     /// assert_eq!(left, vec![File::E, File::D, File::C, File::B, File::A]);
     /// ```
-    pub fn walk_left(&self) -> impl Iterator<Item = Self> {
-        ALL_FILES[..=usize::from(u8::from(*self))]
+    pub fn walk_left(self) -> impl Iterator<Item = Self> {
+        ALL_FILES[..=usize::from(self.as_u8()) - 1]
             .iter()
             .copied()
             .rev()
@@ -364,8 +339,8 @@ impl File {
     /// assert_eq!(File::F.right(), Some(File::G));
     /// assert_eq!(File::H.right(), None);
     /// ```
-    pub fn right(&self) -> Option<Self> {
-        Self::try_from(u8::from(*self) + 1).ok()
+    pub fn right(self) -> Option<Self> {
+        Self::try_from_u8(self.as_u8() + 1).ok()
     }
 
     /// Returns an iterator over the files to the right of, and including `self`.
@@ -376,14 +351,69 @@ impl File {
     /// let right: Vec<File> = File::E.walk_right().collect();
     /// assert_eq!(right, vec![File::E, File::F, File::G, File::H]);
     /// ```
-    pub fn walk_right(&self) -> impl Iterator<Item = Self> {
-        ALL_FILES[usize::from(u8::from(*self))..].iter().copied()
+    pub fn walk_right(self) -> impl Iterator<Item = Self> {
+        ALL_FILES[usize::from(self.as_u8()) - 1..].iter().copied()
+    }
+
+    /// Create an iterator over all positions in the `File`, in ascending order.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use chesspos::prelude::*;
+    /// let ranks: Vec<Position> = File::A.iter().collect();
+    /// assert_eq!(ranks, vec![A1, A2, A3, A4, A5, A6, A7, A8]);
+    /// ```
+    pub fn iter(self) -> impl DoubleEndedIterator<Item = Position> {
+        ALL_RANKS
+            .iter()
+            .map(move |&rank| Position::construct(self, rank))
     }
 
     #[allow(unused)]
-    pub(crate) fn add_offset(&self, offset: i32) -> Option<Self> {
-        let v = (u8::from(*self)) as i32 + offset;
-        Self::try_from(u8::try_from(v).ok()?).ok()
+    pub(crate) fn add_offset(self, offset: i32) -> Option<Self> {
+        let v = i32::from(self.as_u8()) + offset;
+        Self::try_from_u8(u8::try_from(v).ok()?).ok()
+    }
+
+    pub(crate) fn as_u8(self) -> u8 {
+        match self {
+            A => 1,
+            B => 2,
+            C => 3,
+            D => 4,
+            E => 5,
+            F => 6,
+            G => 7,
+            H => 8,
+        }
+    }
+
+    pub(crate) fn try_from_u8(v: u8) -> Result<Self, InvalidFileError> {
+        Ok(match v {
+            1 => A,
+            2 => B,
+            3 => C,
+            4 => D,
+            5 => E,
+            6 => F,
+            7 => G,
+            8 => H,
+            _ => return Err(InvalidFileError::InvalidFile),
+        })
+    }
+
+    pub(crate) fn try_from_char(v: char) -> Result<Self, InvalidFileError> {
+        Ok(match v {
+            'a' | 'A' => A,
+            'b' | 'B' => B,
+            'c' | 'C' => C,
+            'd' | 'D' => D,
+            'e' | 'E' => E,
+            'f' | 'F' => F,
+            'g' | 'G' => G,
+            'h' | 'H' => H,
+            _ => return Err(InvalidFileError::InvalidFile),
+        })
     }
 }
 
@@ -403,6 +433,7 @@ impl Display for File {
     }
 }
 
+/// Error returned when parsing a `File` fails.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InvalidFileError {
     InvalidFile,
@@ -422,64 +453,6 @@ impl Display for InvalidFileError {
 
 impl Error for InvalidFileError {}
 
-impl TryFrom<char> for File {
-    type Error = InvalidFileError;
-
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        Ok(match value {
-            'a' | 'A' => Self::A,
-            'b' | 'B' => Self::B,
-            'c' | 'C' => Self::C,
-            'd' | 'D' => Self::D,
-            'e' | 'E' => Self::E,
-            'f' | 'F' => Self::F,
-            'g' | 'G' => Self::G,
-            'h' | 'H' => Self::H,
-            _ => return Err(InvalidFileError::InvalidFile),
-        })
-    }
-}
-
-impl From<File> for u8 {
-    fn from(value: File) -> Self {
-        match value {
-            A => 0,
-            B => 1,
-            C => 2,
-            D => 3,
-            E => 4,
-            F => 5,
-            G => 6,
-            H => 7,
-        }
-    }
-}
-
-impl From<File> for usize {
-    fn from(value: File) -> Self {
-        usize::from(u8::from(value))
-    }
-}
-
-impl TryFrom<u8> for File {
-    type Error = InvalidFileError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        use File::*;
-        Ok(match value {
-            0 => A,
-            1 => B,
-            2 => C,
-            3 => D,
-            4 => E,
-            5 => F,
-            6 => G,
-            7 => H,
-            _ => return Err(InvalidFileError::InvalidFile),
-        })
-    }
-}
-
 impl PartialOrd for File {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
@@ -488,7 +461,7 @@ impl PartialOrd for File {
 
 impl Ord for File {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        u8::from(*self).cmp(&u8::from(*other))
+        self.as_u8().cmp(&other.as_u8())
     }
 }
 
@@ -514,8 +487,8 @@ impl Rank {
     /// assert_eq!(Rank::One.up(), Some(Rank::Two));
     /// assert_eq!(Rank::Eight.up(), None);
     /// ```
-    pub fn up(&self) -> Option<Self> {
-        Self::try_from(u8::from(*self) + 1).ok()
+    pub fn up(self) -> Option<Self> {
+        Self::try_from_u8(self.as_u8() + 1).ok()
     }
 
     /// Returns an iterator over the ranks above, and including `self`.
@@ -526,8 +499,8 @@ impl Rank {
     /// let up: Vec<Rank> = Rank::Six.walk_up().collect();
     /// assert_eq!(up, vec![Rank::Six, Rank::Seven, Rank::Eight]);
     /// ```
-    pub fn walk_up(&self) -> impl Iterator<Item = Self> {
-        ALL_RANKS[usize::from(u8::from(*self))..].iter().copied()
+    pub fn walk_up(self) -> impl Iterator<Item = Self> {
+        ALL_RANKS[usize::from(self.as_u8()) - 1..].iter().copied()
     }
 
     /// Get the `Rank` below `self`, or `None` if no such rank exists.
@@ -538,10 +511,10 @@ impl Rank {
     /// assert_eq!(Rank::Seven.down(), Some(Rank::Six));
     /// assert_eq!(Rank::One.down(), None);
     /// ```
-    pub fn down(&self) -> Option<Self> {
-        let v = u8::from(*self);
+    pub fn down(self) -> Option<Self> {
+        let v = self.as_u8();
         if v > 0 {
-            Self::try_from(v - 1).ok()
+            Self::try_from_u8(v - 1).ok()
         } else {
             None
         }
@@ -555,11 +528,66 @@ impl Rank {
     /// let down: Vec<Rank> = Rank::Three.walk_down().collect();
     /// assert_eq!(down, vec![Rank::Three, Rank::Two, Rank::One]);
     /// ```
-    pub fn walk_down(&self) -> impl Iterator<Item = Self> {
-        ALL_RANKS[..=usize::from(u8::from(*self))]
+    pub fn walk_down(self) -> impl Iterator<Item = Self> {
+        ALL_RANKS[..=usize::from(self.as_u8()) - 1]
             .iter()
             .copied()
             .rev()
+    }
+
+    /// Create an iterator over all positions in the `Rank`, in ascending order.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use chesspos::prelude::*;
+    /// let ranks: Vec<Position> = Rank::Four.iter().collect();
+    /// assert_eq!(ranks, vec![A4, B4, C4, D4, E4, F4, G4, H4]);
+    /// ```
+    pub fn iter(self) -> impl DoubleEndedIterator<Item = Position> {
+        ALL_FILES
+            .iter()
+            .map(move |&file| Position::construct(file, self))
+    }
+
+    pub(crate) fn as_u8(self) -> u8 {
+        match self {
+            One => 1,
+            Two => 2,
+            Three => 3,
+            Four => 4,
+            Five => 5,
+            Six => 6,
+            Seven => 7,
+            Eight => 8,
+        }
+    }
+
+    pub(crate) fn try_from_u8(v: u8) -> Result<Self, InvalidRankError> {
+        Ok(match v {
+            1 => One,
+            2 => Two,
+            3 => Three,
+            4 => Four,
+            5 => Five,
+            6 => Six,
+            7 => Seven,
+            8 => Eight,
+            _ => return Err(InvalidRankError::InvalidRank),
+        })
+    }
+
+    pub(crate) fn try_from_char(v: char) -> Result<Self, InvalidRankError> {
+        Ok(match v {
+            '1' => One,
+            '2' => Two,
+            '3' => Three,
+            '4' => Four,
+            '5' => Five,
+            '6' => Six,
+            '7' => Seven,
+            '8' => Eight,
+            _ => return Err(InvalidRankError::InvalidRank),
+        })
     }
 }
 
@@ -579,6 +607,7 @@ impl Display for Rank {
     }
 }
 
+/// Error returned when parsing a `Rank` fails.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InvalidRankError {
     InvalidRank,
@@ -598,64 +627,6 @@ impl Display for InvalidRankError {
 
 impl Error for InvalidRankError {}
 
-impl TryFrom<char> for Rank {
-    type Error = InvalidRankError;
-
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        Ok(match value {
-            '1' => Self::One,
-            '2' => Self::Two,
-            '3' => Self::Three,
-            '4' => Self::Four,
-            '5' => Self::Five,
-            '6' => Self::Six,
-            '7' => Self::Seven,
-            '8' => Self::Eight,
-            _ => return Err(InvalidRankError::InvalidRank),
-        })
-    }
-}
-
-impl From<Rank> for u8 {
-    fn from(value: Rank) -> Self {
-        match value {
-            One => 0,
-            Two => 1,
-            Three => 2,
-            Four => 3,
-            Five => 4,
-            Six => 5,
-            Seven => 6,
-            Eight => 7,
-        }
-    }
-}
-
-impl From<Rank> for usize {
-    fn from(value: Rank) -> Self {
-        usize::from(u8::from(value))
-    }
-}
-
-impl TryFrom<u8> for Rank {
-    type Error = InvalidRankError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        use Rank::*;
-        Ok(match value {
-            0 => One,
-            1 => Two,
-            2 => Three,
-            3 => Four,
-            4 => Five,
-            5 => Six,
-            6 => Seven,
-            7 => Eight,
-            _ => return Err(InvalidRankError::InvalidRank),
-        })
-    }
-}
-
 impl PartialOrd for Rank {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
@@ -664,7 +635,7 @@ impl PartialOrd for Rank {
 
 impl Ord for Rank {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        u8::from(*self).cmp(&u8::from(*other))
+        self.as_u8().cmp(&other.as_u8())
     }
 }
 
@@ -721,14 +692,32 @@ mod tests {
 
     #[test]
     fn file_iter_test() {
-        let positions: Vec<Position> = Position::file_iter(File::C).collect();
+        let positions: Vec<Position> = File::C.iter().collect();
         assert_eq!(positions, vec![C1, C2, C3, C4, C5, C6, C7, C8]);
+
+        // reversible
+        let positions: Vec<Position> = File::C.iter().rev().collect();
+        assert_eq!(positions, vec![C8, C7, C6, C5, C4, C3, C2, C1]);
+
+        // peekable
+        let mut i = File::C.iter().peekable();
+        let pos = i.peek();
+        assert!(matches!(pos, Some(Position(File::C, Rank::One))));
     }
 
     #[test]
     fn rank_iter_test() {
-        let positions: Vec<Position> = Position::rank_iter(Rank::Seven).collect();
+        let positions: Vec<Position> = Rank::Seven.iter().collect();
         assert_eq!(positions, vec![A7, B7, C7, D7, E7, F7, G7, H7]);
+
+        // reversible
+        let positions: Vec<Position> = Rank::Seven.iter().rev().collect();
+        assert_eq!(positions, vec![H7, G7, F7, E7, D7, C7, B7, A7]);
+
+        // peekable
+        let mut i = Rank::Seven.iter().peekable();
+        let pos = i.peek();
+        assert!(matches!(pos, Some(Position(File::A, Rank::Seven))));
     }
 
     #[test]
